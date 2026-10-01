@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07090d">
+<title>Seed Counter</title>
+<style>
+:root{--ink:#e8eef5;--dim:#8794a5;--acc:#5ce1e6;--edge:rgba(255,255,255,.1);--glass:rgba(13,17,24,.58);--glass2:rgba(16,21,29,.86);--r:14px;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{position:relative;height:100dvh;overflow:hidden;overscroll-behavior:none;background:#07090d;color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+button,input,label{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+input{user-select:text;-webkit-user-select:text}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.viewer{position:absolute;inset:0;overflow:hidden;touch-action:none;background:radial-gradient(120% 80% at 50% 0,#151d2a,#07090d 70%)}
+.viewer::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/32px 32px,linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/32px 32px}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.glass{background:var(--glass);border:1px solid var(--edge);-webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 44px -12px rgba(0,0,0,.65)}
+.vsize{position:absolute;right:12px;top:calc(12px + env(safe-area-inset-top,0px));bottom:176px;margin:auto 0;height:190px;width:46px;padding:10px 0;border-radius:23px;display:flex;flex-direction:column;align-items:center;gap:8px;animation:rise .6s .2s cubic-bezier(.2,.8,.2,1) both;touch-action:none}
+.vsize #sizeDot{flex:none;display:block;width:14px;height:14px;border-radius:50%;background:var(--acc);opacity:.85;margin:4px 0}
+.vs-track{position:relative;flex:1;width:46px}
+.vsize .vs-track input{-webkit-appearance:none;appearance:none;position:absolute;left:50%;top:50%;width:132px;height:46px;margin:-23px 0 0 -66px;transform:rotate(-90deg);background:transparent}
+.vsize input::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:rgba(255,255,255,.22)}
+.vsize input::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-10px;border-radius:50%;background:var(--acc);border:0;box-shadow:0 0 14px var(--acc)}
+.vsize input::-moz-range-track{height:4px;border-radius:4px;background:rgba(255,255,255,.22)}
+.vsize input::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;background:var(--acc);box-shadow:0 0 14px var(--acc)}
+.stats{display:flex;gap:8px}
+.stats>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:64px;border-radius:18px;border:1px solid var(--edge);background:rgba(255,255,255,.04)}
+.stats>div[hidden]{display:none}
+.stats b{font-size:26px;font-weight:300;line-height:1.1;font-variant-numeric:tabular-nums}
+.stats small{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim)}
+.cap{font-size:12px;color:var(--dim);margin-bottom:-6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px var(--acc);opacity:.55}
+.scanning .dot{animation:pulse .7s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:1;transform:scale(1.5)}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes fade{from{opacity:0}}
+.empty{position:absolute;inset:0 0 150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center}
+.empty[hidden]{display:none}
+.empty h1{margin:14px 0 0;font-size:22px;font-weight:300;letter-spacing:.08em}
+.empty p{margin:0 0 10px;max-width:30ch;color:var(--dim)}
+.cta{display:grid;gap:10px;width:min(240px,100%)}
+.finder{position:relative;width:132px;height:132px}
+.finder svg{width:100%;height:100%;fill:none;stroke:var(--acc);stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 0 6px var(--acc))}
+.finder i{position:absolute;left:10%;right:10%;height:2px;border-radius:2px;background:var(--acc);box-shadow:0 0 16px 2px var(--acc);animation:sweep 2.8s ease-in-out infinite}
+@keyframes sweep{0%,100%{top:12%;opacity:0}15%,85%{opacity:1}50%{top:86%}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 14px;border-radius:var(--r);border:1px solid var(--edge);background:rgba(255,255,255,.06);font-weight:500;font-size:14px;white-space:nowrap;transition:background .15s,transform .1s,border-color .15s,opacity .15s}
+.btn:hover{background:rgba(255,255,255,.11)}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.3;pointer-events:none}
+.btn.primary{background:linear-gradient(135deg,rgba(92,225,230,.28),rgba(92,225,230,.08));border-color:rgba(92,225,230,.5);box-shadow:0 0 22px -6px var(--acc)}
+.btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.dock{position:absolute;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 24px),520px);margin:0 auto;display:grid;gap:8px;padding:8px;border-radius:26px;animation:rise .6s .1s cubic-bezier(.2,.8,.2,1) both}
+.cats,.acts{display:grid;gap:8px;grid-template-columns:repeat(3,1fr)}
+.acts{grid-template-columns:repeat(4,1fr)}
+.acts .btn{flex-direction:column;gap:3px;min-height:54px;padding:0;font-size:11.5px;color:var(--dim);border-color:transparent;background:none}
+@media (hover:hover){.acts .btn:hover{color:var(--ink);background:rgba(255,255,255,.06)}.acts .btn.primary:hover{color:var(--acc)}}
+.acts .btn.primary{color:var(--acc);box-shadow:none;background:none;border-color:transparent}
+.cats button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:64px;border-radius:18px;border:1px solid var(--edge);background:rgba(255,255,255,.04);transition:background .2s,border-color .2s,box-shadow .2s,transform .1s}
+.cats button:active{transform:scale(.97)}
+.cats b{font-size:26px;font-weight:300;line-height:1.1;font-variant-numeric:tabular-nums}
+.cats span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim)}
+.cats span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.cats button.active{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);box-shadow:0 0 26px -8px var(--c),inset 0 0 18px -10px var(--c)}
+.cats button.active span{color:var(--ink)}
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(3,6,10,.5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;width:min(100%,560px);margin:0 auto;display:grid;gap:14px;max-height:88dvh;overflow:auto;padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px));border-radius:26px 26px 0 0;background:var(--glass2);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);border:1px solid var(--edge);border-bottom:0;transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility 0s .3s;visibility:hidden}
+.sheet.on{transform:none;visibility:visible;transition-delay:0s}
+.grip{justify-self:center;width:38px;height:4px;border-radius:4px;background:rgba(255,255,255,.2)}
+.row{display:flex;gap:10px;align-items:flex-end}
+.row>*{flex:1;min-width:0}
+.field{display:grid;gap:5px;font-size:12px;color:var(--dim)}
+.field input[type=text],.field input[type=number]{width:100%;height:46px;padding:0 12px;border:1px solid var(--edge);border-radius:12px;background:rgba(255,255,255,.05);font-size:16px;color:var(--ink)}
+.field input:focus{border-color:var(--acc);outline:0;box-shadow:0 0 0 3px rgba(92,225,230,.15)}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex;align-items:center;gap:8px;min-height:46px;flex:0 0 auto!important;font-size:14px}
+.chk input{accent-color:var(--acc);width:18px;height:18px}
+input[type=color]{width:46px;height:46px;padding:3px;border:1px solid var(--edge);border-radius:12px;background:rgba(255,255,255,.05)}
+input[type=range]{width:100%;height:46px;accent-color:var(--acc)}
+.danger{color:#ff8a80}
+.modal{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:14px;background:rgba(3,6,10,.6);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.modal.active{display:flex;animation:fade .2s}
+.modal-content{width:min(100%,980px);max-height:88dvh;overflow:auto;padding:18px;border-radius:24px;background:var(--glass2);border:1px solid var(--edge);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-header h2{margin:0;font-size:17px;font-weight:500}
+.close-btn{border:0;background:none;font-size:26px;line-height:1;padding:2px 10px;border-radius:10px;cursor:pointer;color:var(--dim)}
+.close-btn:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+#statsTableContainer{overflow-x:auto;border:1px solid var(--edge);border-radius:14px}
+.stats-table{width:100%;min-width:760px;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.stats-table th,.stats-table td{padding:10px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.06)}
+.stats-table th{text-align:center;font-weight:500;color:var(--dim);background:rgba(255,255,255,.04)}
+.stats-table td:first-child{text-align:left;font-weight:500}
+.stats-summary td{background:rgba(255,255,255,.05);font-weight:600;border-bottom:0}
+.modal-actions{display:flex;justify-content:space-between;gap:10px;margin-top:14px}
+.toast{position:fixed;left:50%;bottom:calc(178px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);padding:10px 18px;border-radius:999px;background:var(--glass2);border:1px solid var(--edge);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);font-size:13px;opacity:0;pointer-events:none;z-index:200;transition:opacity .2s,transform .2s;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.cam-overlay { position: fixed; inset: 0; z-index: 5000; background: #000; display: none; flex-direction: column; }
+    .cam-overlay.on { display: flex; }
+    .cam-overlay video { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; }
+    .cam-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 14px 24px calc(18px + env(safe-area-inset-bottom, 0px)); background: #000; }
+    .cam-close { justify-self: start; width: 48px; height: 48px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 22px; cursor: pointer; }
+    .cam-shutter { width: 74px; height: 74px; border-radius: 50%; border: 4px solid #fff; background: #fff; box-shadow: inset 0 0 0 5px #000; cursor: pointer; }
+    .cam-shutter:active { transform: scale(.92); }
+.fit{position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top,0px));width:46px;height:46px;padding:0;border-radius:23px;display:grid;place-items:center;color:var(--ink)}
+.fit[hidden]{display:none}
+.fit svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.rowdel{border:0;background:none;color:var(--dim);font-size:18px;line-height:1;padding:2px 8px;border-radius:8px}
+.rowdel:hover{color:#ff8a80;background:rgba(255,255,255,.08)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="viewer" id="viewer">
+  <canvas id="canvas" role="img" aria-label="Sample image. Tap a seed to count it, drag to pan, pinch to zoom."></canvas>
+  <button class="fit glass" id="fitBtn" aria-label="Fit image to screen" title="Fit to screen (F)" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+  <div class="vsize glass" title="Dot size"><i id="sizeDot"></i><div class="vs-track"><input type="range" id="dotSize" min="3" max="30" value="8" aria-label="Dot size"></div></div>
+  <div class="empty" id="empty">
+    <div class="finder"><svg viewBox="0 0 100 100"><path d="M4 30V4h26M70 4h26v26M96 70v26H70M30 96H4V70"/></svg><i></i></div>
+    <h1>Seed Counter</h1>
+    <p>Photograph a sample or open an image, then tap seeds or let Auto-count find them.</p>
+    <div class="cta"><button class="btn primary js-camera">Take photo</button><button class="btn js-open">Open image</button></div>
+  </div>
+</div>
+
+<nav class="dock glass" id="dock">
+  <div class="stats">
+    <div><b id="totalCount">0</b><small><i class="dot"></i>Seeds</small></div>
+    <div><b id="purityResult">0.0%</b><small>Purity</small></div>
+    <div id="tswWrap"><b id="tswResult">0.00</b><small>TSW · g</small></div>
+  </div>
+  <div class="acts">
+    <button class="btn js-camera"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
+    <button class="btn primary" id="autoBtn"><svg viewBox="0 0 24 24"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 12h16"/></svg>Auto-count</button>
+    <button class="btn" id="undoBtn" disabled><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h9a7 7 0 0 1 0 14h-3"/></svg>Undo</button>
+    <button class="btn" id="moreBtn"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>More</button>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Sample details and settings">
+  <i class="grip"></i>
+  <small class="cap">Tap seeds to count as</small>
+  <div class="cats" aria-label="Active category">
+    <button id="catPure" class="active" aria-pressed="true"><b id="pureCount">0</b><span>Pure</span></button>
+    <button id="catDamaged" aria-pressed="false"><b id="damagedCount">0</b><span>Damaged</span></button>
+    <button id="catInert" aria-pressed="false"><b id="inertCount">0</b><span>Inert</span></button>
+  </div>
+  <div class="row">
+    <label class="field">Lot ID<input type="text" id="variantName" placeholder="Batch / variety" autocomplete="off"></label>
+    <label class="field">Sample weight (g)<input type="number" id="sampleWeight" value="0" step="0.01" min="0" inputmode="decimal"></label>
+  </div>
+  <div class="opts">
+    <button class="btn" id="saveBatchBtn">Save batch</button>
+    <button class="btn" id="viewStatsBtn">Compare batches</button>
+    <button class="btn" id="exportBtn">Export JSON</button>
+    <label class="btn">Import JSON<input type="file" id="importBtn" accept=".json" hidden></label>
+  </div>
+  <div class="row">
+    <label class="field" style="flex:0 0 auto">Colour<input type="color" id="catColor" value="#2ecc71"></label>
+    <label class="chk"><input type="checkbox" id="hidePoints"> Hide dots</label>
+  </div>
+  <label class="field">Auto-count sensitivity (<span id="sensVal">1.00</span>)<input type="range" id="sens" min="0.5" max="1.5" step="0.05" value="1"></label>
+  <small class="cap">Raise it if seeds are missed. Lower it if specks or shadows are counted.</small>
+  <div class="opts">
+    <button class="btn js-open">Open image</button>
+    <button class="btn danger" id="clearBtn">Clear all points</button>
+  </div>
+</section>
+<input type="file" id="upload" accept="image/*" hidden>
+<input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+  <div id="statsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="statsModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="statsModalTitle">Statistical Summary &amp; Batch Comparison</h2>
+        <button class="close-btn" id="closeStatsModal" aria-label="Close">&times;</button>
+      </div>
+      <div id="statsTableContainer"></div>
+      <div class="modal-actions">
+        <button class="btn" id="clearBatchesBtn" style="color:#ff8a80">🗑 Clear Memory</button>
+        <button class="btn" id="exportCsvBtn" style="border-color:rgba(92,225,230,.5);color:var(--acc)">⬇ Export to CSV</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast">Saved.</div>
+  <div class="cam-overlay" id="camOverlay" role="dialog" aria-label="Camera">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="cam-bar">
+      <button class="cam-close" id="camClose" aria-label="Close camera">✕</button>
+      <button class="cam-shutter" id="camShutter" aria-label="Take photo"></button>
+      <span></span>
+    </div>
+  </div>
+  <script>
+    /* Auto-detection engine (added). Pure function: detectSeeds(img) -> { pts:[{x,y}], hw } in image pixels. */
+    function detectSeeds(img, sens = 1) {
+      const MAXS = 1200;
+      let W, H, base, feat = null, otsu = 30, markers = [], hw = 10;
+      const s = Math.min(1, MAXS / Math.max(img.naturalWidth, img.naturalHeight));
+      W = Math.round(img.naturalWidth * s); H = Math.round(img.naturalHeight * s);
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const cx = c.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(img, 0, 0, W, H);
+      base = cx.getImageData(0, 0, W, H);
+const median=a=>a.slice().sort((x,y)=>x-y)[a.length>>1];
+
+function blur(a){
+  const o=new Float32Array(a.length);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let s=0,c=0;
+    for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=H)continue;
+      for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=W)continue;s+=a[yy*W+xx];c++;}}
+    o[y*W+x]=s/c;
+  }
+  return o;
+}
+function otsuOf(a){
+  const h=new Float64Array(256),tot=a.length;
+  for(let i=0;i<tot;i++)h[Math.min(255,a[i]|0)]++;
+  let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];
+  let sb=0,wb=0,mx=0,th=30;
+  for(let i=0;i<256;i++){
+    wb+=h[i];if(!wb)continue;const wf=tot-wb;if(!wf)break;
+    sb+=i*h[i];const mb=sb/wb,mf=(sum-sb)/wf,v=wb*wf*(mb-mf)**2;
+    if(v>mx){mx=v;th=i;}
+  }
+  return Math.max(8,th);
+}
+// Feature = colour distance from the background's colour (tan seeds vs grey/white surface), which ignores lighting gradients
+let lum=null,mL=0,thBase=40;
+function prepare(){
+  const d=base.data,n=W*H,cr=new Float32Array(n),cb=new Float32Array(n);
+  lum=new Float32Array(n);
+  for(let i=0;i<n;i++){const r=d[4*i],g=d[4*i+1],b=d[4*i+2],l=.299*r+.587*g+.114*b;lum[i]=l;cr[i]=r-l;cb[i]=b-l;}
+  const bl=[],bR=[],bB=[],m=Math.max(4,Math.round(Math.min(W,H)*.03));
+  for(let y=0;y<H;y+=3)for(let x=0;x<W;x+=3)if(x<m||y<m||x>=W-m||y>=H-m){const i=y*W+x;bl.push(lum[i]);bR.push(cr[i]);bB.push(cb[i]);}
+  mL=median(bl);const r0=median(bR),b0=median(bB);
+  feat=new Float32Array(n);
+  for(let i=0;i<n;i++)feat[i]=Math.hypot(cr[i]-r0,cb[i]-b0)*2.2;
+  // colourless (black/grey) seeds: fall back to darkness
+  const smp=[];for(let i=0;i<n;i+=7)smp.push(feat[i]);smp.sort((a,b)=>a-b);if(smp[Math.floor(smp.length*.98)]<35)for(let i=0;i<n;i++){const v=mL-lum[i];feat[i]=v>0?v:0;}
+  otsu=otsuOf(feat);
+  const fg=[];for(let i=0;i<n;i+=2)if(feat[i]>otsu)fg.push(feat[i]);
+  thBase=fg.length?median(fg):otsu*2;
+}
+function fillHoles(m,lim){
+  const n=W*H,seen=new Uint8Array(n),st=new Int32Array(n);
+  for(let i=0;i<n;i++){
+    if(m[i]||seen[i])continue;
+    let sp=0,cnt=0,edge=false;const got=[];st[sp++]=i;seen[i]=1;
+    while(sp){
+      const p=st[--sp],x=p%W,y=(p/W)|0;
+      if(++cnt<=lim)got.push(p);
+      if(x===0||y===0||x===W-1||y===H-1)edge=true;
+      if(x>0&&!m[p-1]&&!seen[p-1]){seen[p-1]=1;st[sp++]=p-1;}
+      if(x<W-1&&!m[p+1]&&!seen[p+1]){seen[p+1]=1;st[sp++]=p+1;}
+      if(y>0&&!m[p-W]&&!seen[p-W]){seen[p-W]=1;st[sp++]=p-W;}
+      if(y<H-1&&!m[p+W]&&!seen[p+W]){seen[p+W]=1;st[sp++]=p+W;}
+    }
+    if(!edge&&cnt<=lim)for(const p of got)m[p]=1;
+  }
+}
+function distance(mask){
+  const d=new Float32Array(W*H),n=d.length;
+  for(let i=0;i<n;i++)d[i]=mask[i]?1e6:0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=y*W+x;if(!d[i])continue;let v=d[i];
+    if(x>0)v=Math.min(v,d[i-1]+3);
+    if(y>0){v=Math.min(v,d[i-W]+3);if(x>0)v=Math.min(v,d[i-W-1]+4);if(x<W-1)v=Math.min(v,d[i-W+1]+4);}
+    d[i]=v;
+  }
+  for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){
+    const i=y*W+x;if(!d[i])continue;let v=d[i];
+    if(x<W-1)v=Math.min(v,d[i+1]+3);
+    if(y<H-1){v=Math.min(v,d[i+W]+3);if(x>0)v=Math.min(v,d[i+W-1]+4);if(x<W-1)v=Math.min(v,d[i+W+1]+4);}
+    d[i]=v;
+  }
+  for(let i=0;i<n;i++)d[i]/=3;
+  return d;
+}
+function kmeans(px,k,init){
+  const cs=init.slice(0,k).map(p=>[p.x,p.y]);
+  while(cs.length<k){
+    let best=px[0],bd=-1;
+    for(let j=0;j<px.length;j+=3){
+      const p=px[j],x=p%W,y=(p/W)|0;let d=1e9;
+      for(const c of cs){const e=(x-c[0])**2+(y-c[1])**2;if(e<d)d=e;}
+      if(d>bd){bd=d;best=p;}
+    }
+    cs.push([best%W,(best/W)|0]);
+  }
+  for(let it=0;it<8;it++){
+    const s=cs.map(()=>[0,0,0]);
+    for(const p of px){
+      const x=p%W,y=(p/W)|0;let bi=0,bd=1e9;
+      for(let i=0;i<cs.length;i++){const e=(x-cs[i][0])**2+(y-cs[i][1])**2;if(e<bd){bd=e;bi=i;}}
+      s[bi][0]+=x;s[bi][1]+=y;s[bi][2]++;
+    }
+    s.forEach((v,i)=>{if(v[2])cs[i]=[v[0]/v[2],v[1]/v[2]];});
+  }
+  return cs;
+}
+
+function run(){
+  if(!feat)return;
+  const n=W*H,t=Math.max(6,.65*thBase/sens),mask=new Uint8Array(n);
+  for(let i=0;i<n;i++)mask[i]=(feat[i]>t&&lum[i]<mL+15)?1:0;
+  fillHoles(mask,n*4e-4);
+  const dt=distance(mask),sm=blur(dt);
+
+  // connected components
+  const lab=new Int32Array(n),st=new Int32Array(n),comps=[];
+  for(let i=0;i<n;i++){
+    if(!mask[i]||lab[i])continue;
+    const id=comps.length+1,c={px:[],sx:0,sy:0,md:0,sl:0,pk:[]};let sp=0;
+    st[sp++]=i;lab[i]=id;
+    while(sp){
+      const p=st[--sp],x=p%W,y=(p/W)|0;
+      c.px.push(p);c.sx+=x;c.sy+=y;c.sl+=lum[p];if(dt[p]>c.md)c.md=dt[p];
+      if(x>0&&mask[p-1]&&!lab[p-1]){lab[p-1]=id;st[sp++]=p-1;}
+      if(x<W-1&&mask[p+1]&&!lab[p+1]){lab[p+1]=id;st[sp++]=p+1;}
+      if(y>0&&mask[p-W]&&!lab[p-W]){lab[p-W]=id;st[sp++]=p-W;}
+      if(y<H-1&&mask[p+W]&&!lab[p+W]){lab[p+W]=id;st[sp++]=p+W;}
+    }
+    comps.push(c);
+  }
+
+  comps.forEach(c=>{c.bad=c.sl/c.px.length>mL;});
+  // typical seed half-width (lower-middle of component widths, so merged clumps don't skew it)
+  const big=comps.filter(c=>!c.bad&&c.px.length>=n*3e-4).map(c=>c.md).sort((a,b)=>a-b);
+  hw=big.length?big[Math.floor(big.length*.4)]:10;
+  const minA=0.25*5*hw*hw;
+  const R=Math.max(2,Math.round(hw*(1.1-60*.008)));
+
+  // local maxima of the smoothed distance map = one per seed
+  const thP=.45*hw;
+  for(let i=0;i<n;i++){
+    if(!mask[i]||sm[i]<thP)continue;
+    const x=i%W,y=(i/W)|0;let ok=true;
+    for(let dy=-R;dy<=R&&ok;dy++){
+      const yy=y+dy;if(yy<0||yy>=H)continue;
+      for(let dx=-R;dx<=R;dx++){const xx=x+dx;if(xx<0||xx>=W)continue;if(sm[yy*W+xx]>sm[i]){ok=false;break;}}
+    }
+    if(!ok)continue;
+    const c=comps[lab[i]-1];
+    if(c.bad)continue;
+    if(!c.pk.some(q=>Math.abs(q.x-x)<=R&&Math.abs(q.y-y)<=R))c.pk.push({x,y,v:sm[i]});
+  }
+
+  // per-blob count: peaks, sanity-checked against blob area vs. a typical single seed
+  const valid=comps.filter(c=>!c.bad&&c.px.length>=minA);
+  const sa=valid.filter(c=>c.pk.length===1).map(c=>c.px.length);
+  const single=sa.length?median(sa):5*hw*hw;
+  markers=[];
+  for(const c of valid){
+    const a=c.px.length,lo=Math.max(1,Math.round(a/(1.2*single))),hi=Math.max(1,Math.round(a/(.7*single)));
+    const k=Math.min(hi,Math.max(lo,c.pk.length||1));
+    if(k===1)markers.push([c.sx/a,c.sy/a]);
+    else kmeans(c.px,k,c.pk.sort((p,q)=>q.v-p.v)).forEach(m=>markers.push(m));
+  }
+
+  return {pts:markers,hw:hw};
+}
+
+
+      prepare();
+      const r = run(), kx = img.naturalWidth / W, ky = img.naturalHeight / H;
+      return { pts: r.pts.map(m => ({ x: m[0] * kx, y: m[1] * ky })), hw: r.hw * kx };
+    }
+  </script>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const els = {
+        viewer: document.getElementById('viewer'),
+        canvas: document.getElementById('canvas'),
+        upload: document.getElementById('upload'),
+        dock: document.getElementById('dock'),
+        autoBtn: document.getElementById('autoBtn'),
+        camInput: document.getElementById('camInput'),
+        undoBtn: document.getElementById('undoBtn'),
+        moreBtn: document.getElementById('moreBtn'),
+        empty: document.getElementById('empty'),
+        sheet: document.getElementById('sheet'),
+        scrim: document.getElementById('scrim'),
+        tswWrap: document.getElementById('tswWrap'),
+        importBtn: document.getElementById('importBtn'),
+        exportBtn: document.getElementById('exportBtn'),
+        saveBatchBtn: document.getElementById('saveBatchBtn'),
+        viewStatsBtn: document.getElementById('viewStatsBtn'),
+        closeStatsModal: document.getElementById('closeStatsModal'),
+        clearBatchesBtn: document.getElementById('clearBatchesBtn'),
+        exportCsvBtn: document.getElementById('exportCsvBtn'),
+        statsModal: document.getElementById('statsModal'),
+        statsTableContainer: document.getElementById('statsTableContainer'),
+        totalCount: document.getElementById('totalCount'),
+        pureCount: document.getElementById('pureCount'),
+        damagedCount: document.getElementById('damagedCount'),
+        inertCount: document.getElementById('inertCount'),
+        variantName: document.getElementById('variantName'),
+        sampleWeight: document.getElementById('sampleWeight'),
+        purityResult: document.getElementById('purityResult'),
+        tswResult: document.getElementById('tswResult'),
+        catColor: document.getElementById('catColor'),
+        dotSize: document.getElementById('dotSize'),
+        hidePoints: document.getElementById('hidePoints'),
+        sens: document.getElementById('sens'),
+        sensVal: document.getElementById('sensVal'),
+        fitBtn: document.getElementById('fitBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        toast: document.getElementById('toast'),
+        catPure: document.getElementById('catPure'),
+        catDamaged: document.getElementById('catDamaged'),
+        catInert: document.getElementById('catInert'),
+        ctx: document.getElementById('canvas').getContext('2d'),
+      };
+
+      const STORAGE_KEY = 'seed-counter-batches-v1';
+      const PREFS_KEY = 'seed-counter-prefs-v1';
+      const HOLD_CLEAR_DURATION = 1500;
+      const TAP_DIST = 24;
+      const LONG_PRESS_DELETE_MS = 500;
+      const MIN_SCALE = 0.05;
+      const MAX_SCALE = 40;
+      const dpr = window.devicePixelRatio || 1;
+
+      const state = {
+        img: null,
+        currentImageName: 'unknown',
+        points: [],
+        history: [],
+        scan: null,
+        freshUntil: 0,
+        batches: loadJSON(STORAGE_KEY, []),
+        activeCategory: 'pure',          // set by buttons / keyboard
+        lastEventModifiers: null,        // { shiftKey, altKey } from latest pointer event
+        hidePoints: false,
+        dotSize: 8,
+        sens: 1,
+        categories: {
+          pure: { name: 'Pure Seed', color: '#2ecc71' },
+          damaged: { name: 'Damaged', color: '#e74c3c' },
+          inert: { name: 'Inert Matter', color: '#94a3b8' }
+        },
+        view: { x: 0, y: 0, scale: 1 },
+        panStart: null,
+        moved: false,
+        isPanning: false,
+        pinch: null,
+        lastTap: { time: 0, pos: null },
+        deleteLongPressTimer: null,
+        longPressDeleteData: null,
+        clearTimer: null,
+        clearStartTime: null,
+        renderQueued: false
+      };
+
+      applyPrefs(loadJSON(PREFS_KEY, null));
+      syncControlValues();
+      updateCategoryButtons();  // ensure active button highlights
+      updateAll();
+      renderStatsTable();
+      resizeCanvas(true);
+
+      function loadJSON(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch { return fallback; }
+      }
+
+      function saveJSON(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+      }
+
+      var prefsTimer = 0;
+      function persistPrefs() { clearTimeout(prefsTimer); prefsTimer = setTimeout(writePrefs, 400); }
+      function writePrefs() {
+        saveJSON(PREFS_KEY, {
+          dotSize: state.dotSize,
+          hidePoints: state.hidePoints,
+          activeCategory: state.activeCategory,
+          categories: state.categories,
+          sens: state.sens,
+          variantName: els.variantName.value,
+          sampleWeight: els.sampleWeight.value
+        });
+      }
+
+      function applyPrefs(prefs) {
+        if (!prefs) return;
+        if (typeof prefs.dotSize === 'number') state.dotSize = clamp(prefs.dotSize, 3, 30);
+        if (typeof prefs.hidePoints === 'boolean') state.hidePoints = prefs.hidePoints;
+        if (typeof prefs.sens === 'number') state.sens = clamp(prefs.sens, 0.5, 1.5);
+        if (prefs.activeCategory && state.categories[prefs.activeCategory]) state.activeCategory = prefs.activeCategory;
+        if (prefs.categories && typeof prefs.categories === 'object') {
+          for (const key of Object.keys(state.categories)) {
+            if (prefs.categories[key]?.color) state.categories[key].color = prefs.categories[key].color;
+          }
+        }
+        if (typeof prefs.variantName === 'string') els.variantName.value = prefs.variantName;
+        if (prefs.sampleWeight !== undefined) els.sampleWeight.value = prefs.sampleWeight;
+      }
+
+      function confirmTap(btn, label) {
+        if (btn.dataset.armed) { clearTimeout(btn._t); btn.textContent = btn.dataset.orig; delete btn.dataset.armed; return true; }
+        btn.dataset.orig = btn.textContent; btn.dataset.armed = '1'; btn.textContent = label;
+        btn._t = setTimeout(() => { btn.textContent = btn.dataset.orig; delete btn.dataset.armed; }, 2500);
+        return false;
+      }
+      function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+      function escapeHtml(str) {
+        return String(str).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+      }
+
+      function showToast(msg) {
+        els.toast.textContent = msg;
+        els.toast.classList.add('show');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => els.toast.classList.remove('show'), 1600);
+      }
+
+      function scheduleRender() {
+        if (state.renderQueued) return;
+        state.renderQueued = true;
+        requestAnimationFrame(() => {
+          state.renderQueued = false;
+          draw();
+        });
+      }
+
+      function getCounts() {
+        let pure = 0, damaged = 0, inert = 0;
+        for (const p of state.points) {
+          if (p.cat === 'pure') pure++;
+          else if (p.cat === 'damaged') damaged++;
+          else if (p.cat === 'inert') inert++;
+        }
+        const total = state.points.length;
+        const weight = parseFloat(els.sampleWeight.value) || 0;
+        const purity = total > 0 ? (pure / total) * 100 : 0;
+        const tsw = pure > 0 && weight > 0 ? (weight / pure) * 1000 : 0;
+        return { total, pure, damaged, inert, weight, purity, tsw };
+      }
+
+      function updateQC() {
+        const qc = getCounts();
+        els.totalCount.textContent = qc.total;
+        els.pureCount.textContent = qc.pure;
+        els.damagedCount.textContent = qc.damaged;
+        els.inertCount.textContent = qc.inert;
+        els.purityResult.textContent = qc.purity.toFixed(1) + '%';
+        els.tswResult.textContent = qc.tsw.toFixed(2);
+        els.undoBtn.disabled = !state.history.length;
+        return qc;
+      }
+
+      function updateAll() {
+        updateQC();
+        els.empty.hidden = !!state.img;
+        els.fitBtn.hidden = !state.img;
+        scheduleRender();
+        persistPrefs();
+      }
+
+      function paintSize() { document.getElementById('sizeDot').style.width = document.getElementById('sizeDot').style.height = (4 + state.dotSize * 0.75) + 'px'; }
+
+      function syncControlValues() {
+        els.dotSize.value = String(state.dotSize);
+        paintSize();
+        els.hidePoints.checked = state.hidePoints;
+        els.sens.value = String(state.sens);
+        els.sensVal.textContent = state.sens.toFixed(2);
+        els.catColor.value = state.categories[state.activeCategory].color;
+        updateCategoryButtons();
+      }
+
+      function updateCategoryButtons() {
+        const cat = state.activeCategory;
+        els.catPure.classList.toggle('active', cat === 'pure');
+        els.catPure.setAttribute('aria-pressed', String(cat === 'pure'));
+        els.catDamaged.classList.toggle('active', cat === 'damaged');
+        els.catDamaged.setAttribute('aria-pressed', String(cat === 'damaged'));
+        els.catInert.classList.toggle('active', cat === 'inert');
+        els.catInert.setAttribute('aria-pressed', String(cat === 'inert'));
+        els.catColor.value = state.categories[cat].color;
+        for (const k in state.categories) els['cat' + k[0].toUpperCase() + k.slice(1)].style.setProperty('--c', state.categories[k].color);
+      }
+
+      function setCategory(cat) {
+        if (!state.categories[cat]) return;
+        state.activeCategory = cat;
+        updateCategoryButtons();
+        persistPrefs();
+      }
+
+      function fitImageToView() {
+        if (!state.img) return;
+        const rect = els.viewer.getBoundingClientRect();
+        const top = 16, bot = els.dock.offsetHeight + 24;
+        const H = Math.max(120, rect.height - top - bot);
+        const s = Math.min(rect.width / state.img.width, H / state.img.height, 1);
+        state.view.scale = s;
+        state.view.x = (rect.width - state.img.width * s) / 2;
+        state.view.y = top + (H - state.img.height * s) / 2;
+      }
+
+      function resizeCanvas(preserveView = true) {
+        rectCache = null;
+        const rect = els.viewer.getBoundingClientRect();
+        const old = preserveView ? { ...state.view } : null;
+        els.canvas.width = Math.max(1, Math.round(rect.width * dpr));
+        els.canvas.height = Math.max(1, Math.round(rect.height * dpr));
+        if (preserveView && old) state.view = old;
+        scheduleRender();
+      }
+
+      var rectCache = null;
+      function canvasRect() { return rectCache || (rectCache = els.canvas.getBoundingClientRect()); }
+
+      function screenToImage(screenX, screenY) {
+        const rect = canvasRect();
+        return {
+          x: (screenX - rect.left - state.view.x) / state.view.scale,
+          y: (screenY - rect.top - state.view.y) / state.view.scale
+        };
+      }
+
+      function imageToScreen(imgX, imgY) {
+        const rect = canvasRect();
+        return {
+          x: rect.left + (imgX * state.view.scale + state.view.x),
+          y: rect.top + (imgY * state.view.scale + state.view.y)
+        };
+      }
+
+      const births = new WeakMap(), POP = 420;
+      function stepScan(now) {
+        const s = state.scan;
+        if (!s.t0) s.t0 = now;
+        const k = Math.min(1, (now - s.t0) / s.dur);
+        s.y = k * state.img.height;
+        let n = 0;
+        while (s.i < s.pts.length && s.pts[s.i].y <= s.y) { const p = s.pts[s.i++]; state.points.push(p); births.set(p, now); n++; }
+        if (n) { state.freshUntil = now + POP; updateQC(); }
+        if (k >= 1) { s.end = s.end || now; if (now - s.end > 500) endScan(true); }
+      }
+      function endScan(done) {
+        const s = state.scan; if (!s) return;
+        state.scan = null;
+        document.body.classList.remove('scanning');
+        els.autoBtn.disabled = false;
+        updateAll();
+        if (done) showToast(s.pts.length + ' seeds found · ' + state.points.length + ' total');
+      }
+      function drawScan(ctx, now) {
+        const s = state.scan, v = state.view, sc = v.scale;
+        const x0 = v.x, w = state.img.width * sc, top = v.y, bot = v.y + state.img.height * sc, y = v.y + s.y * sc;
+        const trail = Math.max(top, y - 120);
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.globalAlpha = s.end ? Math.max(0, 1 - (now - s.end) / 500) : 1;
+        ctx.fillStyle = 'rgba(4,8,14,.4)'; ctx.fillRect(x0, y, w, bot - y);
+        const g = ctx.createLinearGradient(0, trail, 0, y);
+        g.addColorStop(0, 'rgba(92,225,230,0)'); g.addColorStop(1, 'rgba(92,225,230,.3)');
+        ctx.fillStyle = g; ctx.fillRect(x0, trail, w, y - trail);
+        ctx.shadowColor = '#5ce1e6'; ctx.shadowBlur = 18; ctx.fillStyle = '#c4f8fa';
+        ctx.fillRect(x0, y - 1, w, 2);
+        ctx.restore();
+      }
+
+      function draw() {
+        const ctx = els.ctx;
+        ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
+        if (!state.img) return;
+        const now = performance.now(), v = state.view, s = v.scale;
+        if (state.scan) stepScan(now);
+        ctx.save();
+        ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * v.x, dpr * v.y);
+        ctx.imageSmoothingEnabled = s < 3;
+        ctx.drawImage(state.img, 0, 0);
+        if (!state.hidePoints && state.points.length) {
+          const r = state.dotSize / s, fresh = now < state.freshUntil, live = [];
+          const x0 = -v.x / s - r, y0 = -v.y / s - r;
+          const x1 = (els.canvas.width / dpr - v.x) / s + r, y1 = (els.canvas.height / dpr - v.y) / s + r;
+          ctx.lineWidth = 2 / s;
+          for (const cat in state.categories) {
+            ctx.fillStyle = ctx.strokeStyle = state.categories[cat].color;
+            ctx.beginPath();
+            for (const p of state.points) {
+              if (p.cat !== cat || p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
+              if (fresh) { const b = births.get(p); if (b && now - b < POP) { live.push([p, b]); continue; } }
+              ctx.moveTo(p.x + r, p.y); ctx.arc(p.x, p.y, r, 0, 6.2832);
+            }
+            ctx.globalAlpha = .4; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+          }
+          for (const [p, b] of live) {
+            const t = (now - b) / POP, u = t - 1, e = 1 + 2.70158 * u * u * u + 1.70158 * u * u, col = state.categories[p.cat].color;
+            ctx.fillStyle = ctx.strokeStyle = col; ctx.lineWidth = 2 / s;
+            ctx.beginPath(); ctx.arc(p.x, p.y, r * Math.max(e, 0), 0, 6.2832); ctx.globalAlpha = .4; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+            ctx.globalAlpha = (1 - t) * .8; ctx.strokeStyle = col; ctx.lineWidth = 2 / s;
+            ctx.beginPath(); ctx.arc(p.x, p.y, r * (1 + t * 2.4), 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+          }
+        }
+        ctx.restore();
+        if (state.scan) drawScan(ctx, now);
+        if (state.scan || now < state.freshUntil) scheduleRender();
+      }
+
+      function addPoint(imgPos, cat) {
+        pushHistory();
+        state.points.push({ x: imgPos.x, y: imgPos.y, cat });
+        navigator.vibrate?.(6);
+        updateAll();
+      }
+
+      function deletePoint(index) {
+        if (index < 0 || index >= state.points.length) return;
+        pushHistory();
+        state.points.splice(index, 1);
+        updateAll();
+      }
+
+      function clearPoints() {
+        if (!state.points.length) return;
+        pushHistory();
+        state.points = [];
+        updateAll();
+      }
+
+      function pushHistory() { state.history.push(state.points.slice()); if (state.history.length > 100) state.history.shift(); }
+      function undo() {
+        if (state.scan) endScan(false);
+        if (!state.history.length) return;
+        state.points = state.history.pop();
+        state.lastTap = { time: 0, pos: null };
+        updateAll();
+      }
+
+      function tryAddPoint(screenX, screenY) {
+        let cat = state.activeCategory;
+        if (state.lastEventModifiers) {
+          if (state.lastEventModifiers.altKey) cat = 'inert';
+          else if (state.lastEventModifiers.shiftKey) cat = 'damaged';
+        }
+        const imgPos = screenToImage(screenX, screenY), now = Date.now();
+        // ignore accidental double-taps only (not neighbouring seeds tapped later)
+        if (state.lastTap.pos && now - state.lastTap.time < 300) {
+          const prev = imageToScreen(state.lastTap.pos.x, state.lastTap.pos.y);
+          if (Math.hypot(screenX - prev.x, screenY - prev.y) < TAP_DIST) return;
+        }
+        state.lastTap = { time: now, pos: imgPos };
+        // tapping an existing dot re-classifies it; tapping it in its own category removes it
+        const hit = state.hidePoints ? -1 : findPointIndexAt(screenX, screenY, 1.1);
+        if (hit !== -1) {
+          const p = state.points[hit];
+          pushHistory();
+          if (p.cat === cat) { state.points.splice(hit, 1); showToast('Dot removed'); }
+          else { state.points[hit] = { x: p.x, y: p.y, cat }; showToast('Changed to ' + state.categories[cat].name); }
+          navigator.vibrate?.(6);
+          updateAll();
+          return;
+        }
+        addPoint(imgPos, cat);
+      }
+
+      function findPointIndexAt(screenX, screenY, k = 1.8) {
+        const threshold = state.dotSize * k;
+        let bestIdx = -1;
+        let bestDist = Infinity;
+        for (let i = 0; i < state.points.length; i++) {
+          const p = state.points[i];
+          const pt = imageToScreen(p.x, p.y);
+          const dist = Math.hypot(screenX - pt.x, screenY - pt.y);
+          if (dist < threshold && dist < bestDist) {
+            bestDist = dist;
+            bestIdx = i;
+          }
+        }
+        return bestIdx;
+      }
+
+      function deletePointAt(screenX, screenY) {
+        const idx = findPointIndexAt(screenX, screenY);
+        if (idx !== -1) {
+          deletePoint(idx);
+          return true;
+        }
+        return false;
+      }
+
+      function zoomAtPoint(screenX, screenY, factor) {
+        if (!state.img) return;
+        const oldScale = state.view.scale;
+        const newScale = clamp(oldScale * factor, MIN_SCALE, MAX_SCALE);
+        if (newScale === oldScale) return;
+        const rect = canvasRect();
+        const cssX = screenX - rect.left;
+        const cssY = screenY - rect.top;
+        const imgX = (cssX - state.view.x) / oldScale;
+        const imgY = (cssY - state.view.y) / oldScale;
+        state.view.scale = newScale;
+        state.view.x = cssX - imgX * newScale;
+        state.view.y = cssY - imgY * newScale;
+        scheduleRender();
+      }
+
+      function startPan(screenX, screenY) {
+        state.panStart = { x: screenX, y: screenY, viewX: state.view.x, viewY: state.view.y };
+        state.moved = false;
+        state.isPanning = false;
+      }
+
+      function updatePan(screenX, screenY) {
+        if (!state.panStart) return;
+        const dx = screenX - state.panStart.x;
+        const dy = screenY - state.panStart.y;
+        if (!state.moved && (Math.abs(dx) > 12 || Math.abs(dy) > 12)) state.moved = true;
+        if (state.moved) {
+          state.isPanning = true;
+          state.view.x = state.panStart.viewX + dx;
+          state.view.y = state.panStart.viewY + dy;
+          scheduleRender();
+        }
+      }
+
+      function endPan(screenX, screenY) {
+        const wasTap = state.panStart && !state.moved && !state.isPanning;
+        if (wasTap) tryAddPoint(screenX, screenY);
+        state.panStart = null;
+        state.moved = false;
+        state.isPanning = false;
+      }
+
+      function startPinch(touches) {
+        const t1 = touches[0], t2 = touches[1];
+        const rect = canvasRect();
+        const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+        const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const imgX = (midX - state.view.x) / state.view.scale;
+        const imgY = (midY - state.view.y) / state.view.scale;
+        state.pinch = { startDist: dist, startScale: state.view.scale, imgPoint: { x: imgX, y: imgY } };
+      }
+
+      function movePinch(touches) {
+        if (!state.pinch) return;
+        const t1 = touches[0], t2 = touches[1];
+        const rect = canvasRect();
+        const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+        const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const nextScale = clamp(state.pinch.startScale * (dist / state.pinch.startDist), MIN_SCALE, MAX_SCALE);
+        state.view.scale = nextScale;
+        state.view.x = midX - state.pinch.imgPoint.x * nextScale;
+        state.view.y = midY - state.pinch.imgPoint.y * nextScale;
+        scheduleRender();
+      }
+
+      function endPinch() {
+        state.pinch = null;
+      }
+
+      const cvOf = s => s.mean ? ' · CV ' + (s.sd / s.mean * 100).toFixed(1) + '%' : '';
+      function calculateDescriptiveStats(values) {
+        if (!values.length) return { mean: 0, sd: 0 };
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        if (values.length === 1) return { mean, sd: 0 };
+        const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1);
+        return { mean, sd: Math.sqrt(variance) };
+      }
+
+      function renderStatsTable() {
+        if (!state.batches.length) {
+          els.statsTableContainer.innerHTML = '<p style="text-align:center;padding:20px;">No batches saved yet. Count seeds and click “Save Batch”.</p>';
+          return;
+        }
+        const purities = [];
+        const tsws = [];
+        let rows = '';
+        for (const [i, b] of state.batches.entries()) {
+          rows += `
+            <tr>
+              <td>${escapeHtml(b.lotId)}</td>
+              <td>${Number(b.weight).toFixed(2)}</td>
+              <td>${Number(b.total)}</td>
+              <td>${Number(b.pure)}</td>
+              <td>${Number(b.damaged)}</td>
+              <td>${Number(b.inert)}</td>
+              <td>${Number(b.purity).toFixed(1)}</td>
+              <td>${Number(b.tsw).toFixed(2)}</td>
+              <td><button class="rowdel" data-i="${i}" aria-label="Delete ${escapeHtml(b.lotId)}">&times;</button></td>
+            </tr>`;
+          if (Number.isFinite(b.purity) && b.purity > 0) purities.push(Number(b.purity));
+          if (Number.isFinite(b.tsw) && b.tsw > 0) tsws.push(Number(b.tsw));
+        }
+        const purStats = calculateDescriptiveStats(purities);
+        const tswStats = calculateDescriptiveStats(tsws);
+        els.statsTableContainer.innerHTML = `
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Lot ID</th>
+                <th>Sample Wt (g)</th>
+                <th>Total Seeds</th>
+                <th>Pure</th>
+                <th>Damaged</th>
+                <th>Inert</th>
+                <th>Purity (% by count)</th>
+                <th>TSW (g)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            <tfoot class="stats-summary">
+              <tr>
+                <td colspan="6" style="text-align:right;"><strong>Mean ± SD (n-1):</strong></td>
+                <td>${purStats.mean.toFixed(1)} ± ${purStats.sd.toFixed(2)}${cvOf(purStats)}</td>
+                <td>${tswStats.mean.toFixed(2)} ± ${tswStats.sd.toFixed(2)}${cvOf(tswStats)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>`;
+      }
+
+      function saveBatch() {
+        if (!state.points.length) {
+          showToast('Nothing to save yet.');
+          return;
+        }
+        const lotId = (els.variantName.value.trim() || `Sample ${state.batches.length + 1}`);
+        const qc = getCounts();
+        state.batches.push({
+          lotId,
+          total: qc.total,
+          pure: qc.pure,
+          damaged: qc.damaged,
+          inert: qc.inert,
+          weight: qc.weight,
+          purity: qc.purity,
+          tsw: qc.tsw,
+          image: state.currentImageName,
+          savedAt: new Date().toISOString()
+        });
+        saveJSON(STORAGE_KEY, state.batches);
+        renderStatsTable();
+        showToast(`Saved ${lotId}.`);
+      }
+
+      function exportCsv() {
+        if (!state.batches.length) {
+          showToast('No batches to export yet.');
+          return;
+        }
+        const lines = [
+          ['Lot ID','Sample Weight (g)','Total Seeds','Pure Seed','Damaged','Inert Matter','Purity (% by count)','TSW (g)','Image','Saved at'].join(',')
+        ];
+        for (const b of state.batches) {
+          lines.push([
+            csvCell(b.lotId),
+            b.weight,
+            b.total,
+            b.pure,
+            b.damaged,
+            b.inert,
+            Number(b.purity).toFixed(2),
+            Number(b.tsw).toFixed(3),
+            csvCell(b.image),
+            csvCell(b.savedAt)
+          ].join(','));
+        }
+        const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Seed_Batch_Comparison.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function csvCell(v) {
+        let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return '"' + s.replaceAll('"', '""') + '"';
+      }
+
+      function exportJson() {
+        if (!state.points.length) {
+          showToast('Nothing to export yet.');
+          return;
+        }
+        const qc = getCounts();
+        const data = {
+          version: 2,
+          variantName: els.variantName.value,
+          imageName: state.currentImageName,
+          imageWidth: state.img ? state.img.width : 0,
+          imageHeight: state.img ? state.img.height : 0,
+          summary: {
+            totalCount: qc.total,
+            pureCount: qc.pure,
+            damagedCount: qc.damaged,
+            inertCount: qc.inert,
+            sampleWeightGrams: qc.weight,
+            thousandSeedWeight: qc.tsw,
+            purityPercentage: qc.purity
+          },
+          dotSize: state.dotSize,
+          categories: state.categories,
+          activeCategory: state.activeCategory,
+          hidePoints: state.hidePoints,
+          points: state.points
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const baseName = els.variantName.value.trim()
+          ? els.variantName.value.trim()
+          : (state.currentImageName !== 'unknown' ? state.currentImageName.replace(/\.[^.]+$/, '') : 'seed_qc');
+        a.download = `${baseName}-qc-points.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function importJson(file) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const data = JSON.parse(ev.target.result);
+            if (state.img) {
+              const warnings = [];
+              if (data.imageName && data.imageName !== state.currentImageName) warnings.push('Name mismatch');
+              if (Number(data.imageWidth) !== state.img.width || Number(data.imageHeight) !== state.img.height) warnings.push('Resolution mismatch');
+              
+            }
+            if (Array.isArray(data.points)) {
+              pushHistory();
+              state.points = data.points.map(p => ({
+                x: Number(p.x),
+                y: Number(p.y),
+                cat: p.cat === 'good' ? 'pure' : (state.categories[p.cat] ? p.cat : 'pure')
+              })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+            }
+            if (typeof data.variantName === 'string') els.variantName.value = data.variantName;
+            if (data.summary?.sampleWeightGrams !== undefined) els.sampleWeight.value = data.summary.sampleWeightGrams;
+            else if (data.sampleWeight !== undefined) els.sampleWeight.value = data.sampleWeight;
+            if (data.categories && typeof data.categories === 'object') {
+              for (const key of Object.keys(state.categories)) {
+                if (data.categories[key]?.color) state.categories[key].color = data.categories[key].color;
+              }
+            }
+            if (data.dotSize !== undefined) state.dotSize = clamp(Number(data.dotSize) || 8, 3, 30);
+            if (typeof data.hidePoints === 'boolean') state.hidePoints = data.hidePoints;
+            if (data.activeCategory && state.categories[data.activeCategory]) state.activeCategory = data.activeCategory;
+            syncControlValues();
+            updateAll();
+            showToast(state.img && ((data.imageName && data.imageName !== state.currentImageName) || Number(data.imageWidth) !== state.img.width || Number(data.imageHeight) !== state.img.height) ? 'Imported, but the image differs from the export. Undo to revert.' : 'Import complete.');
+          } catch { showToast('Import failed.'); }
+        };
+        reader.readAsText(file);
+      }
+
+      // Event listeners: category buttons
+      els.catPure.addEventListener('click', () => setCategory('pure'));
+      els.catDamaged.addEventListener('click', () => setCategory('damaged'));
+      els.catInert.addEventListener('click', () => setCategory('inert'));
+
+      // Color picker: changes color of active category
+      els.catColor.addEventListener('input', e => {
+        state.categories[state.activeCategory].color = e.target.value;
+        updateCategoryButtons();
+        persistPrefs();
+        scheduleRender();
+      });
+
+      els.dotSize.addEventListener('input', e => {
+        state.dotSize = clamp(Number(e.target.value) || 8, 3, 30);
+        paintSize();
+        persistPrefs();
+        scheduleRender();
+      });
+      els.hidePoints.addEventListener('change', e => {
+        state.hidePoints = e.target.checked;
+        persistPrefs();
+        scheduleRender();
+      });
+
+      els.sampleWeight.addEventListener('input', updateAll);
+      els.variantName.addEventListener('input', persistPrefs);
+      [els.upload, els.camInput].forEach(inp => inp.addEventListener('change', e => {
+        const file = e.target.files?.[0];
+        if (file) loadImageFile(file);
+        e.target.value = '';
+      }));
+
+      els.saveBatchBtn.addEventListener('click', saveBatch);
+      els.viewStatsBtn.addEventListener('click', () => { closeSheet(); openStatsModal(); });
+      els.closeStatsModal.addEventListener('click', closeStatsModal);
+      els.statsModal.addEventListener('click', e => { if (e.target === els.statsModal) closeStatsModal(); });
+
+      els.clearBatchesBtn.addEventListener('click', () => {
+        if (!confirmTap(els.clearBatchesBtn, 'Tap again to clear all')) return;
+        state.batches = [];
+        saveJSON(STORAGE_KEY, state.batches);
+        renderStatsTable();
+        showToast('Batch memory cleared.');
+      });
+
+      els.exportCsvBtn.addEventListener('click', exportCsv);
+      els.statsTableContainer.addEventListener('click', e => {
+        const b = e.target.closest('.rowdel');
+        if (!b || !confirmTap(b, 'Delete?')) return;
+        state.batches.splice(Number(b.dataset.i), 1);
+        saveJSON(STORAGE_KEY, state.batches);
+        renderStatsTable();
+      });
+      els.fitBtn.addEventListener('click', () => { fitImageToView(); scheduleRender(); });
+      els.sens.addEventListener('input', e => {
+        state.sens = clamp(Number(e.target.value) || 1, 0.5, 1.5);
+        els.sensVal.textContent = state.sens.toFixed(2);
+        persistPrefs();
+      });
+      els.exportBtn.addEventListener('click', exportJson);
+      els.importBtn.addEventListener('change', e => {
+        const file = e.target.files?.[0];
+        if (file) importJson(file);
+        e.target.value = '';
+      });
+
+      els.clearBtn.addEventListener('click', () => { if (!state.points.length) return; clearPoints(); closeSheet(); showToast('Cleared. Tap Undo to restore.'); });
+
+      // Pointer events
+      function handlePointerDown(e) {
+        if (state.statsModalOpen) return;
+        if (!state.img) return;
+        if (e.button === 2) {
+          e.preventDefault();
+          deletePointAt(e.clientX, e.clientY);
+          return;
+        }
+        if (e.pointerType === 'touch' && !e.isPrimary) return;
+        e.preventDefault();
+        els.canvas.setPointerCapture(e.pointerId);
+        startPan(e.clientX, e.clientY);
+        if (e.pointerType === 'touch') startDeleteLongPress(e);
+      }
+
+      function startDeleteLongPress(e) {
+        state.longPressDeleteData = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
+        state.deleteLongPressTimer = setTimeout(() => {
+          const d = state.longPressDeleteData;
+          if (d && deletePointAt(d.x, d.y)) {
+            state.panStart = null;
+            try { els.canvas.releasePointerCapture(d.pointerId); } catch {}
+          }
+          cancelDeleteLongPress();
+        }, LONG_PRESS_DELETE_MS);
+      }
+
+      function cancelDeleteLongPress() {
+        if (state.deleteLongPressTimer) clearTimeout(state.deleteLongPressTimer);
+        state.deleteLongPressTimer = null;
+        state.longPressDeleteData = null;
+      }
+
+      function handlePointerUp(e) {
+        if (!state.img) return;
+        cancelDeleteLongPress();
+        // Save modifier keys for point placement
+        state.lastEventModifiers = { shiftKey: e.shiftKey, altKey: e.altKey };
+        if (state.panStart) endPan(e.clientX, e.clientY);
+        try { els.canvas.releasePointerCapture(e.pointerId); } catch {}
+      }
+
+      function handlePointerMove(e) {
+        if (!state.img || !state.panStart) return;
+        e.preventDefault();
+        updatePan(e.clientX, e.clientY);
+        if (state.moved) cancelDeleteLongPress();
+      }
+
+      function handleWheel(e) {
+        if (!state.img) return;
+        e.preventDefault();
+        const dy = e.deltaY * (e.deltaMode === 1 ? 33 : 1);
+        zoomAtPoint(e.clientX, e.clientY, Math.exp(-clamp(dy, -100, 100) * (e.ctrlKey ? 0.01 : 0.002)));
+      }
+
+      els.canvas.addEventListener('wheel', handleWheel, { passive: false });
+      els.canvas.addEventListener('pointerdown', handlePointerDown);
+      els.canvas.addEventListener('pointermove', handlePointerMove);
+      els.canvas.addEventListener('pointerup', handlePointerUp);
+      els.canvas.addEventListener('pointercancel', handlePointerUp);
+      els.canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+      els.canvas.addEventListener('touchstart', e => {
+        if (!state.img) return;
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          cancelDeleteLongPress();
+          state.panStart = null;
+          startPinch(e.touches);
+        }
+      }, { passive: false });
+
+      els.canvas.addEventListener('touchmove', e => {
+        if (!state.img) return;
+        if (e.touches.length === 2 && state.pinch) {
+          e.preventDefault();
+          movePinch(e.touches);
+        }
+      }, { passive: false });
+
+      els.canvas.addEventListener('touchend', e => {
+        if (e.touches.length < 2) endPinch();
+      });
+      els.canvas.addEventListener('touchcancel', endPinch);
+
+      function closeSheet() { els.sheet.classList.remove('on'); els.scrim.classList.remove('on'); }
+      els.moreBtn.addEventListener('click', () => { els.sheet.classList.add('on'); els.scrim.classList.add('on'); });
+      els.scrim.addEventListener('click', closeSheet);
+      els.sheet.querySelectorAll('.cats button').forEach(b => b.addEventListener('click', () => setTimeout(closeSheet, 220)));
+      els.undoBtn.addEventListener('click', undo);
+      document.querySelectorAll('.js-open').forEach(b => b.addEventListener('click', () => { closeSheet(); els.upload.click(); }));
+      window.addEventListener('pagehide', writePrefs);
+      window.addEventListener('beforeunload', e => { if (state.points.length) e.preventDefault(); });
+
+      new ResizeObserver(() => resizeCanvas(true)).observe(els.viewer);
+
+      // Keyboard shortcuts: P, D, I set the active category button
+      window.addEventListener('keydown', e => {
+        if (e.target && e.target.tagName === 'INPUT') return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === 'f' || e.key === 'F') { e.preventDefault(); fitImageToView(); scheduleRender(); }
+        if (e.key === 'p' || e.key === 'P') { e.preventDefault(); setCategory('pure'); }
+        if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setCategory('damaged'); }
+        if (e.key === 'i' || e.key === 'I') { e.preventDefault(); setCategory('inert'); }
+        if (e.key === 'Escape') { closeSheet(); if (state.statsModalOpen) closeStatsModal(); }
+      });
+
+      function openStatsModal() {
+        setTimeout(() => els.closeStatsModal.focus(), 50);
+        state.statsModalOpen = true;
+        renderStatsTable();
+        els.statsModal.classList.add('active');
+      }
+
+      function closeStatsModal() {
+        state.statsModalOpen = false;
+        els.statsModal.classList.remove('active');
+      }
+
+      function loadImageFile(file) {
+        if (state.scan) endScan(false);
+        state.currentImageName = file.name || 'unknown';
+        const url = URL.createObjectURL(file), img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          state.img = img; state.points = []; state.history = [];
+          state.lastTap = { time: 0, pos: null };
+          fitImageToView(); resizeCanvas(); updateAll();
+          showToast('Tap each seed to count it.');
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); showToast('Could not open that image.'); };
+        img.src = url;
+      }
+
+      // statsModalOpen state
+      Object.defineProperty(state, 'statsModalOpen', {
+        get() { return els.statsModal.classList.contains('active'); },
+        set(v) { v ? els.statsModal.classList.add('active') : els.statsModal.classList.remove('active'); }
+      });
+
+      // ---- In-app camera (added): live preview inside the page, photo goes straight into loadImageFile ----
+      const cam = { el: document.getElementById('camOverlay'), video: document.getElementById('camVideo'), stream: null, busy: false, useNative: false };
+      function stopCamera() {
+        if (cam.stream) cam.stream.getTracks().forEach(t => t.stop());
+        cam.stream = null; cam.video.srcObject = null; cam.el.classList.remove('on');
+      }
+      async function openCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { els.camInput.click(); return; }
+        try {
+          cam.stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 3072 } }
+          });
+        } catch (err) {
+          console.warn(err); cam.useNative = true;
+          showToast('Opening the phone camera…');
+          els.camInput.click();
+          return;
+        }
+        cam.video.srcObject = cam.stream; cam.el.classList.add('on');
+        try { await cam.video.play(); } catch (_) {}
+      }
+      async function snapPhoto() {
+        const track = cam.stream && cam.stream.getVideoTracks()[0];
+        if (!track || cam.busy || !cam.video.videoWidth) return;
+        cam.busy = true;
+        try {
+          let blob = null;
+          if (window.ImageCapture) { try { blob = await new ImageCapture(track).takePhoto(); } catch (_) {} }  // full-resolution still
+          if (!blob) {                                                                                      // fallback: grab the video frame
+            const v = cam.video, c = document.createElement('canvas');
+            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
+          }
+          stopCamera();
+          if (blob) {
+            const d = new Date(), z = n => String(n).padStart(2, '0');
+            const name = `photo_${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.jpg`;
+            loadImageFile(new File([blob], name, { type: 'image/jpeg' }));
+          }
+        } finally { cam.busy = false; }
+      }
+      document.querySelectorAll('.js-camera').forEach(b => b.addEventListener('click', () => { closeSheet(); cam.useNative ? els.camInput.click() : openCamera(); }));
+      document.getElementById('camShutter').addEventListener('click', snapPhoto);
+      document.getElementById('camClose').addEventListener('click', stopCamera);
+      window.addEventListener('keydown', e => { if (e.key === 'Escape' && cam.stream) stopCamera(); });
+      document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(); });
+
+      // ---- Auto-detect (added): places 'pure' points on seeds; never moves or removes existing points ----
+      els.autoBtn.addEventListener('click', () => {
+        if (!state.img) { showToast('Load an image first.'); return; }
+        if (state.scan || els.autoBtn.disabled) return;
+        const stop = () => { els.autoBtn.disabled = false; document.body.classList.remove('scanning'); };
+        els.autoBtn.disabled = true; document.body.classList.add('scanning');
+        requestAnimationFrame(() => setTimeout(() => {
+          let res;
+          try { res = detectSeeds(state.img, state.sens); } catch (err) { console.error(err); stop(); showToast('Auto-detect failed.'); return; }
+          const minD2 = Math.pow(res.hw * 0.8, 2), pts = [], keep = state.points.filter(p => !p.auto);
+          for (const m of res.pts) {
+            if (keep.some(p => (p.x - m.x) ** 2 + (p.y - m.y) ** 2 < minD2) || pts.some(p => (p.x - m.x) ** 2 + (p.y - m.y) ** 2 < minD2)) continue;
+            pts.push({ x: m.x, y: m.y, cat: 'pure', auto: true });
+          }
+          if (!pts.length) { stop(); showToast('No new seeds found.'); return; }
+          pts.sort((a, b) => a.y - b.y);
+          pushHistory();
+          state.points = keep; state.scan = { pts, i: 0, t0: 0, y: 0, dur: Math.min(3400, 1500 + pts.length * 6) };
+          scheduleRender();
+        }, 30));
+      });
+
+      draw();
+    })();
+  </script>
+<script>
+/* Android wrapper: WebView ignores blob downloads, so hand exports to the native bridge */
+document.addEventListener('click',function(e){
+  var a=e.target.closest&&e.target.closest('a[download]');
+  if(!a||!window.AndroidBridge||a.href.indexOf('blob:')!==0)return;
+  e.preventDefault();
+  fetch(a.href).then(function(r){return r.blob()}).then(function(b){
+    var fr=new FileReader();
+    fr.onload=function(){AndroidBridge.save(a.download,(b.type||'application/octet-stream').split(';')[0],String(fr.result).split(',')[1]);};
+    fr.readAsDataURL(b);
+  });
+},true);
+</script>
+</body>
+</html>
